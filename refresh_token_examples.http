@@ -1,0 +1,132 @@
+# Refresh Token API Examples
+# Test the new refresh token functionality
+
+### Variables
+@baseUrl = http://localhost:8000
+@contentType = application/json
+
+###
+### 🔐 AUTHENTICATION WITH REFRESH TOKENS
+###
+
+### 1. Login with admin user (now returns refresh token)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### 2. Use the access token for price estimation
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "location": "Nyandarua",
+  "logistics_mode": "wholesale",
+  "variety_grade_factor": 1.0
+}
+
+### 3. Refresh the access token using refresh token
+# @name refresh
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refresh_token": "{{login.response.body.refresh_token}}"
+}
+
+### 4. Use the new access token
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{refresh.response.body.access_token}}
+
+{
+  "location": "Nairobi",
+  "logistics_mode": "retail",
+  "variety_grade_factor": 1.2
+}
+
+### 5. Revoke a specific refresh token
+POST {{baseUrl}}/auth/revoke
+Content-Type: {{contentType}}
+
+{
+  "refresh_token": "{{refresh.response.body.refresh_token}}"
+}
+
+### 6. Try to use revoked refresh token (should fail)
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refresh_token": "{{refresh.response.body.refresh_token}}"
+}
+
+###
+### 🔒 ADVANCED REFRESH TOKEN FEATURES
+###
+
+### Login again for revoke-all test
+# @name login2
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Create another session (second login)
+# @name login3
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Revoke all tokens for the user (logout from all devices)
+POST {{baseUrl}}/auth/revoke-all
+Content-Type: {{contentType}}
+Authorization: Bearer {{login2.response.body.access_token}}
+
+### Try to refresh with any previous token (should fail)
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refresh_token": "{{login3.response.body.refresh_token}}"
+}
+
+###
+### 🚨 ERROR SCENARIOS
+###
+
+### Invalid refresh token
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refresh_token": "invalid_token_here"
+}
+
+### Expired refresh token (simulated)
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNjcwMDAwMDAwLCJleHAiOjE2NzAwMDAwMDAsImlzcyI6InBvdGF0by1wcmljZS1hcGkiLCJ0eXBlIjoicmVmcmVzaCIsImp0aSI6IjEifQ.example"
+}
+
+### Missing refresh token
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "invalid_field": "test"
+}

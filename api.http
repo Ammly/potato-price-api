@@ -1,0 +1,638 @@
+# Potato Price API - HTTP Requests
+# Based on PRD requirements and implementation
+# Use with VS Code REST Client extension or similar tools
+#
+# 🚀 Quick Start:
+# 1. Start services: `docker compose up -d`
+# 2. Install VS Code REST Client extension
+# 3. Click "Send Request" above any ### block
+#
+# 📋 API Overview:
+# - Base URL: http://localhost:8000
+# - Authentication: JWT Bearer tokens (15min expiry)
+# - Rate Limits: Auth endpoints limited, estimates 120/min
+# - Cache: Price estimates cached 5min, weather 2hrs
+#
+# 🔑 Authentication Flow:
+# 1. POST /auth/register (optional - admin user exists)
+# 2. POST /auth/login → get access_token
+# 3. Use "Authorization: Bearer {token}" header
+#
+# 📊 Default Test User:
+# Username: admin
+# Password: admin123
+
+### Variables
+@baseUrl = http://localhost:8000
+@contentType = application/json
+
+###
+### 🏥 HEALTH & MONITORING
+###
+
+### Health Check
+# Returns system status with DB/Redis connectivity
+# No authentication required
+# Response: 200 (healthy) or 503 (degraded)
+GET {{baseUrl}}/health
+
+###
+### 🔐 AUTHENTICATION
+###
+
+### Register a new user
+# Creates new user account with Argon2 hashed password
+# Rate limit: 5 requests/minute
+# Returns: 201 (created) or 400 (user exists)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+    "username": "testuser",
+    "password": "TestPass123!"
+}
+
+### Register admin user (duplicate test)
+# Test case: attempt to register existing user
+# Expected: 400 error (user_exists)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+    "username": "admin",
+    "password": "admin123"
+}
+
+### Login with admin user
+# Authenticates user and returns JWT token
+# Rate limit: 10 requests/minute
+# Token expires in 15 minutes (configurable)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "username": "admin",
+    "password": "admin123"
+}
+
+### Login with test user
+# Alternative login for testing
+# @name loginTest
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "username": "testuser",
+    "password": "TestPass123!"
+}
+
+### Login with invalid credentials
+# Test case: invalid username/password
+# Expected: 401 error (invalid_credentials)
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "username": "nonexistent",
+    "password": "wrongpass"
+}
+
+###
+### 🏪 MARKETS & METADATA
+###
+
+### Get Markets List
+# Returns all available markets with latest prices
+# No authentication required
+# Includes: market details, coordinates, latest price data
+GET {{baseUrl}}/prices/markets
+
+###
+### 💰 PRICE ESTIMATION
+###
+
+### Price Estimate - Basic Request (requires auth)
+# Core price estimation endpoint
+# Required: location, logistics_mode, variety_grade_factor
+# Optional: season_index, shock_index, weather_override, overrides
+# Returns: estimate, uncertainty range, explainable breakdown
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",        // farmgate (0.9x) | wholesale (1.0x) | retail (1.2x)
+    "variety_grade_factor": 1.0,         // 0.5-2.0 (quality multiplier)
+    "season_index": 0.2,                 // -1.0 to 1.0 (abundant to scarce)
+    "shock_index": 0.0                   // -1.0 to 1.0 (market shock factor)
+}
+
+### Price Estimate - With Weather Override
+# Manual weather impact override (0.0-1.0)
+# Bypasses automatic weather data lookup
+# Useful for testing weather sensitivity
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 0.2,
+    "shock_index": 0.0,
+    "weather_override": 0.8              // High weather impact (80%)
+}
+
+### Price Estimate - With Market Price Overrides
+# Override specific market prices for estimation
+# Useful for scenario testing or when market data is stale
+# Only affects specified markets, others use DB prices
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 0.2,
+    "shock_index": 0.0,
+    "overrides": {
+        "Nakuru": 95.0,                  // Override Nakuru price to 95 KES/kg
+        "Nairobi": 100.0                 // Override Nairobi price to 100 KES/kg
+    }
+}
+
+### Price Estimate - Farmgate Logistics
+# Farmgate pricing (0.9x multiplier)
+# Represents farm-gate prices before transportation
+# Typically 10% lower than wholesale
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "farmgate",        // 0.9x pricing multiplier
+    "variety_grade_factor": 1.0,
+    "season_index": -0.3,                // Abundant season (lower prices)
+    "shock_index": 0.0
+}
+
+### Price Estimate - Retail Logistics
+# Retail pricing (1.2x multiplier)
+# Represents consumer retail prices
+# Typically 20% higher than wholesale
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "retail",          // 1.2x pricing multiplier
+    "variety_grade_factor": 1.2,         // High quality variety
+    "season_index": 0.5,                 // Scarce season (higher prices)
+    "shock_index": 0.3                   // Moderate market shock
+}
+
+### Price Estimate - High Quality Variety
+# Premium variety with 1.5x quality multiplier
+# Represents high-grade potatoes (seed, export quality)
+# Increases final price by 50%
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.5,         // Premium quality (150% of base)
+    "season_index": 0.1,                 // Slightly scarce season
+    "shock_index": 0.0
+}
+
+### Price Estimate - Low Quality Variety
+# Lower grade variety with 0.7x quality multiplier
+# Represents table-grade or processing potatoes
+# Reduces final price by 30%
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 0.7,         // Lower quality (70% of base)
+    "season_index": 0.1,
+    "shock_index": 0.0
+}
+
+### Price Estimate - Shock Event (High)
+# High market shock scenario (0.8 = 80% impact)
+# Could represent supply disruption, transport issues, etc.
+# Increases price due to market stress
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 0.0,
+    "shock_index": 0.8                   // High shock event (80% impact)
+}
+
+### Price Estimate - Different Location (Nairobi)
+# Test estimation for different target location
+# Uses Nairobi as target instead of Nyandarua
+# Shows how location affects distance-weighted pricing
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nairobi",               // Different target location
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 0.0,
+    "shock_index": 0.0
+}
+
+### Price Estimate - Unauthorized (no token)
+# Error test: missing authentication
+# Expected: 401 Unauthorized error
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0
+}
+
+### Price Estimate - Invalid Logistics Mode
+# Error test: invalid logistics_mode value
+# Expected: 400 Bad Request (validation error)
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "invalid_mode",     // Invalid value
+    "variety_grade_factor": 1.0
+}
+
+### Price Estimate - Invalid Season Index (out of range)
+# Error test: season_index outside valid range (-1.0 to 1.0)
+# Expected: 400 Bad Request (validation error)
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 2.0                  // Invalid: outside [-1.0, 1.0] range
+}
+
+###
+### 🌤️ WEATHER DATA
+###
+
+### Get Latest Weather - Nairobi
+# Fetch latest weather data for Nairobi market
+# Returns cached data if available, otherwise fetches from API
+# Rate limited: 60 requests/minute
+GET {{baseUrl}}/weather/latest?location=Nairobi
+
+### Get Latest Weather - Nakuru
+# Fetch latest weather data for Nakuru market
+# Includes rain data and normalized weather index
+GET {{baseUrl}}/weather/latest?location=Nakuru
+
+### Get Latest Weather - Nyandarua (non-existent market)
+# Error test: request weather for non-existent market
+# Expected: 404 Not Found (unknown_location)
+GET {{baseUrl}}/weather/latest?location=Nyandarua
+
+### Get Latest Weather - Missing Location Parameter
+# Error test: missing required location parameter
+# Expected: 400 Bad Request (missing_location)
+GET {{baseUrl}}/weather/latest
+
+### Get Weather History - Nairobi (7 days)
+# Fetch historical weather data for Nairobi (last 7 days)
+# Rate limited: 30 requests/minute
+# Returns array of weather records with timestamps
+GET {{baseUrl}}/weather/history?location=Nairobi&days=7
+
+### Get Weather History - Nakuru (14 days)
+# Fetch historical weather data for Nakuru (last 14 days)
+# Useful for trend analysis and model training
+GET {{baseUrl}}/weather/history?location=Nakuru&days=14
+
+### Get Weather History - Too Many Days (should error)
+# Error test: request more than maximum allowed days (30)
+# Expected: 400 Bad Request (max_30_days)
+GET {{baseUrl}}/weather/history?location=Nairobi&days=35
+
+### Get Weather History - Missing Location
+# Error test: missing required location parameter
+# Expected: 400 Bad Request (missing_location)
+GET {{baseUrl}}/weather/history?days=7
+
+###
+### 🚦 RATE LIMITING TESTS
+###
+
+### Test Rate Limiting - Multiple Login Attempts (should hit 10/min limit)
+# Stress test: repeated login attempts to trigger rate limit
+# Rate limit: 10 requests/minute for login endpoint
+# Run multiple times quickly to see 429 Too Many Requests
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "username": "admin",
+    "password": "admin123"
+}
+
+### Test Rate Limiting - Multiple Register Attempts (should hit 5/min limit)
+# Stress test: repeated registration attempts to trigger rate limit
+# Rate limit: 5 requests/minute for register endpoint
+# Expected: 429 Too Many Requests after 5 attempts
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+    "username": "ratelimituser1",
+    "password": "TestPass123!"
+}
+
+###
+### 🔄 INTEGRATION TEST SCENARIOS
+###
+
+### Scenario 1: Full User Journey
+# Complete workflow from registration to price estimation
+# Demonstrates typical frontend integration flow
+
+# 1. Register new user
+# Creates account for integration testing
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+    "username": "journey_user",
+    "password": "Journey123!"
+}
+
+### 2. Login with new user
+# Authenticate and get access token for subsequent requests
+# @name journeyLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "username": "journey_user",
+    "password": "Journey123!"
+}
+
+### 3. Check markets
+# Get available markets and current prices
+# No authentication required - public endpoint
+GET {{baseUrl}}/prices/markets
+
+### 4. Get price estimate
+# Core functionality: price estimation with authentication
+# Uses token from previous login request
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{journeyLogin.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 0.0,
+    "shock_index": 0.0
+}
+
+### 5. Get weather data
+# Fetch weather information for context
+# Demonstrates weather data availability
+GET {{baseUrl}}/weather/latest?location=Nairobi
+
+###
+### ⚠️ EDGE CASES AND ERROR SCENARIOS
+###
+
+### Invalid JSON Payload
+# Error test: malformed JSON in request body
+# Expected: 400 Bad Request (JSON parse error)
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "username": "admin"
+    // missing password and comma - invalid JSON
+}
+
+### Missing Required Fields
+# Error test: incomplete request payload
+# Expected: 400 Bad Request (validation error)
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua"
+    // missing logistics_mode and variety_grade_factor
+}
+
+### Invalid Content-Type
+# Error test: wrong content type for JSON endpoint
+# Expected: 400 Bad Request or unsupported media type
+POST {{baseUrl}}/auth/login
+Content-Type: text/plain
+
+username=admin&password=admin123
+
+### Expired/Invalid Token
+# Error test: invalid JWT token
+# Expected: 401 Unauthorized (invalid token)
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer invalid.jwt.token
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0
+}
+
+###
+### ⚡ PERFORMANCE TESTING SCENARIOS
+###
+
+### Cached Request (should be faster on second call)
+# Performance test: first request populates cache
+# Measures cache population and database query time
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 0.2,
+    "shock_index": 0.0
+}
+
+### Same Request Again (should hit cache)
+# Performance test: identical request should return cached result
+# Should be significantly faster (~5ms vs ~100ms+)
+# Cache TTL: 5 minutes for price estimates
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 0.2,
+    "shock_index": 0.0
+}
+
+###
+### 📋 PRD EXAMPLE REQUESTS (Exact from specification)
+###
+
+### PRD Example - Register
+# Exact example from PRD document
+# Username and password as specified in requirements
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+    "username": "zaweria",
+    "password": "StrongPass123"
+}
+
+### PRD Example - Login
+# Exact example from PRD document
+# Returns access token for PRD example requests
+# @name prdLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "username": "zaweria",
+    "password": "StrongPass123"
+}
+
+### PRD Example - Price Estimate
+# Exact example from PRD specification
+# Includes all optional parameters as specified
+# Demonstrates overrides and weather override functionality
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{prdLogin.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "season_index": 0.2,
+    "shock_index": 0.0,
+    "overrides": {
+        "Nakuru": 32,                     // Override prices as in PRD
+        "Nairobi": 30
+    },
+    "weather_override": 0.3               // Manual weather override
+}
+
+###
+### 🏥 MONITORING AND HEALTH CHECKS
+###
+
+### Health Check (should show all services healthy)
+# Primary health endpoint for monitoring/alerting
+# Returns 200 if all services operational, 503 if degraded
+GET {{baseUrl}}/health
+
+### Health Check with detailed inspection
+# Same endpoint with explicit Accept header
+# Useful for automated monitoring tools
+GET {{baseUrl}}/health
+Accept: application/json
+
+###
+### ✅ DATA VALIDATION TESTS
+###
+
+### Test Variety Grade Factor Bounds (too low)
+# Boundary test: variety_grade_factor below minimum (0.5)
+# Expected: 400 Bad Request (validation error)
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 0.3,         // Below minimum (0.5)
+    "season_index": 0.0,
+    "shock_index": 0.0
+}
+
+### Test Variety Grade Factor Bounds (too high)
+# Boundary test: variety_grade_factor above maximum (2.0)
+# Expected: 400 Bad Request (validation error)
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 2.5,         // Above maximum (2.0)
+    "season_index": 0.0,
+    "shock_index": 0.0
+}
+
+### Test Weather Override Bounds (too high)
+# Boundary test: weather_override above maximum (1.0)
+# Expected: 400 Bad Request (validation error)
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "weather_override": 1.5              // Above maximum (1.0)
+}
+
+### Test Negative Weather Override (should error)
+# Boundary test: weather_override below minimum (0.0)
+# Expected: 400 Bad Request (validation error)
+POST {{baseUrl}}/prices/estimate
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+    "location": "Nyandarua",
+    "logistics_mode": "wholesale",
+    "variety_grade_factor": 1.0,
+    "weather_override": -0.1             // Below minimum (0.0)
+}

@@ -9,11 +9,13 @@ from .estimator import estimate as estimator_fn
 
 prices_bp = Blueprint("prices", __name__)
 
+
 def get_cache_key(req_data):
     """Generate cache key from request parameters"""
     # Sort the dict to ensure consistent hashing
     normalized = json.dumps(req_data, sort_keys=True)
     return f"estimate:{hashlib.md5(normalized.encode()).hexdigest()}"
+
 
 @prices_bp.route("/estimate", methods=["POST"])
 @jwt_required
@@ -28,7 +30,7 @@ def estimate_price():
     # Check Redis cache first
     redis_client = get_redis()
     cache_key = get_cache_key(body)
-    
+
     try:
         cached_result = redis_client.get(cache_key)
         if cached_result:
@@ -48,11 +50,13 @@ def estimate_price():
             prices_now[m] = float(req.overrides[m])
         else:
             # get latest market price
-            mp = (db.session.query(MarketPrice)
-                  .join(Market, Market.id == MarketPrice.market_id)
-                  .filter(Market.name == m)
-                  .order_by(MarketPrice.date.desc())
-                  .first())
+            mp = (
+                db.session.query(MarketPrice)
+                .join(Market, Market.id == MarketPrice.market_id)
+                .filter(Market.name == m)
+                .order_by(MarketPrice.date.desc())
+                .first()
+            )
             prices_now[m] = mp.price_kg if mp else 0.0
 
         # friction map / distance — try to get from Market.friction_map
@@ -71,20 +75,22 @@ def estimate_price():
 
     # 4) weather_index: use override or latest WeatherData for the target location (if exists)
     weather_index = req.weather_override if req.weather_override is not None else 0.0
-    
+
     # Try Redis cache first for weather
     try:
         cached_weather = redis_client.get(f"weather:latest:{req.location}")
         if cached_weather:
             weather_data = json.loads(cached_weather)
-            weather_index = weather_data.get('weather_index', 0.0)
+            weather_index = weather_data.get("weather_index", 0.0)
     except Exception:
         # Fallback to database
-        w = (db.session.query(WeatherData)
-             .join(Market, Market.id == WeatherData.market_id)
-             .filter(Market.name == req.location)
-             .order_by(WeatherData.timestamp.desc())
-             .first())
+        w = (
+            db.session.query(WeatherData)
+            .join(Market, Market.id == WeatherData.market_id)
+            .filter(Market.name == req.location)
+            .order_by(WeatherData.timestamp.desc())
+            .first()
+        )
         if w:
             weather_index = w.weather_index
 
@@ -94,10 +100,12 @@ def estimate_price():
         cached_sigma = redis_client.get(f"sigma:{req.location}")
         if cached_sigma:
             sigma_data = json.loads(cached_sigma)
-            sigma = sigma_data.get('sigma', 1.0)
+            sigma = sigma_data.get("sigma", 1.0)
     except Exception:
         # Fallback to database
-        sigma_state = db.session.query(ModelState).filter_by(key=f"sigma:{req.location}").first()
+        sigma_state = (
+            db.session.query(ModelState).filter_by(key=f"sigma:{req.location}").first()
+        )
         if sigma_state:
             sigma = sigma_state.value.get("sigma", 1.0)
 
@@ -117,11 +125,15 @@ def estimate_price():
     confidence_band = [float(p_hat - sigma), float(p_hat + sigma)]
 
     # 7) persist new base into model state
-    db_state = db.session.query(ModelState).filter_by(key=f"base:{req.location}").first()
+    db_state = (
+        db.session.query(ModelState).filter_by(key=f"base:{req.location}").first()
+    )
     if db_state:
         db_state.value = {"base": explain["base_smoothed"]}
     else:
-        db_state = ModelState(key=f"base:{req.location}", value={"base": explain["base_smoothed"]})
+        db_state = ModelState(
+            key=f"base:{req.location}", value={"base": explain["base_smoothed"]}
+        )
         db.session.add(db_state)
     db.session.commit()
 
@@ -129,7 +141,7 @@ def estimate_price():
         estimate=round(p_hat, 2),
         range=[round(confidence_band[0], 2), round(confidence_band[1], 2)],
         explain=explain,
-        sources=["KAMIS/NPCK (db)"]
+        sources=["KAMIS/NPCK (db)"],
     )
 
     # Cache the result for 5 minutes
@@ -141,38 +153,42 @@ def estimate_price():
 
     return jsonify(result_json), 200
 
+
 @prices_bp.route("/markets", methods=["GET"])
 def list_markets():
     """Get list of all markets with latest prices"""
     try:
         markets = db.session.query(Market).all()
         result = []
-        
+
         for market in markets:
             # Get latest price for this market
-            latest_price = (db.session.query(MarketPrice)
-                           .filter(MarketPrice.market_id == market.id)
-                           .order_by(MarketPrice.date.desc())
-                           .first())
-            
+            latest_price = (
+                db.session.query(MarketPrice)
+                .filter(MarketPrice.market_id == market.id)
+                .order_by(MarketPrice.date.desc())
+                .first()
+            )
+
             market_data = {
                 "id": market.id,
                 "name": market.name,
                 "county": market.county,
                 "lat": market.lat,
                 "lon": market.lon,
-                "latest_price": {
-                    "price_kg": latest_price.price_kg if latest_price else None,
-                    "date": latest_price.date.isoformat() if latest_price else None,
-                    "source": latest_price.source if latest_price else None
-                } if latest_price else None
+                "latest_price": (
+                    {
+                        "price_kg": latest_price.price_kg if latest_price else None,
+                        "date": latest_price.date.isoformat() if latest_price else None,
+                        "source": latest_price.source if latest_price else None,
+                    }
+                    if latest_price
+                    else None
+                ),
             }
             result.append(market_data)
-        
-        return jsonify({
-            "markets": result,
-            "count": len(result)
-        }), 200
-        
+
+        return jsonify({"markets": result, "count": len(result)}), 200
+
     except Exception as e:
         return jsonify({"error": "internal_error", "details": str(e)}), 500

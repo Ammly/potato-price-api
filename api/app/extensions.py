@@ -13,6 +13,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 _redis_client = None
 
+
 def get_redis():
     global _redis_client
     if _redis_client is None:

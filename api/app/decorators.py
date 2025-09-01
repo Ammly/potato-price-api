@@ -2,6 +2,7 @@ from functools import wraps
 from flask import request, jsonify
 from .utils.jwt_utils import decode_access_token
 
+
 def jwt_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -15,4 +16,5 @@ def jwt_required(fn):
         except Exception as e:
             return jsonify({"error": "invalid_token", "details": str(e)}), 401
         return fn(*args, **kwargs)
+
     return wrapper

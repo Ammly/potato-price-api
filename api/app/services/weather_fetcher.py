@@ -3,13 +3,14 @@ from datetime import datetime
 
 OPENWEATHER_URL = "https://api.openweathermap.org/data/3.0/onecall"
 
+
 def fetch_weather_for(lat: float, lon: float, api_key: str) -> dict:
     params = {
         "lat": lat,
         "lon": lon,
         "appid": api_key,
         "units": "metric",
-        "exclude": "minutely"  # keep payload small
+        "exclude": "minutely",  # keep payload small
     }
     r = requests.get(OPENWEATHER_URL, params=params, timeout=10)
     r.raise_for_status()
@@ -30,5 +31,5 @@ def fetch_weather_for(lat: float, lon: float, api_key: str) -> dict:
         "rain_mm": rain_mm,
         "weather_code": weather_code,
         "weather_index": weather_index,
-        "raw": payload
+        "raw": payload,
     }

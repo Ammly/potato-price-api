@@ -1,4 +1,3 @@
-# api/app/config.py
 import os
 
 class Config:

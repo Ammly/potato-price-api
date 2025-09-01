@@ -1,4 +1,3 @@
-# api/app/services/weather_fetcher.py
 import requests
 from datetime import datetime
 

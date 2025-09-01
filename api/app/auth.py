@@ -1,4 +1,3 @@
-# api/app/auth.py
 from flask import Blueprint, request, jsonify, current_app
 from .extensions import db, limiter
 from .models import User, RefreshToken

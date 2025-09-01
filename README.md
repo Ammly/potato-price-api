@@ -5,7 +5,7 @@ A production-ready API for estimating potato prices in Kenya, integrating weathe
 ## Features
 
 - **JWT Authentication**: Secure API access with Argon2 password hashing
-- **Price Estimation**: ML-based price prediction with weather integration
+- **Price Estimation**: Multi-factor algorithmic pricing with weather integration
 - **Weather Integration**: OpenWeatherMap API integration for real-time weather data
 - **Market Data**: Support for multiple markets with distance-weighted pricing
 - **Celery Tasks**: Background processing for weather data fetching
@@ -292,19 +292,21 @@ docker compose exec beat celery -A app.celery_app inspect scheduled
 
 ## Estimator Algorithm
 
-The price estimation uses a multi-factor model:
+The price estimation uses a **rule-based multi-factor model**:
 
 ```
 P_hat = Base × Season × Logistics × Shock × Weather × Variety
 
 Where:
 - Base: Distance-weighted average of market prices with EWMA smoothing
-- Season: Seasonal adjustment factor (k1 × season_index)
+- Season: Seasonal adjustment factor (fixed coefficient × season_index)
 - Logistics: Mode multiplier (farmgate: 0.9, wholesale: 1.0, retail: 1.2)
-- Shock: Market shock adjustment (k2 × shock_index)
-- Weather: Weather impact factor (k3 × weather_index)
+- Shock: Market shock adjustment (fixed coefficient × shock_index)
+- Weather: Weather impact factor (fixed coefficient × weather_index)
 - Variety: Quality/grade multiplier
 ```
+
+**Note**: This is a deterministic algorithm with fixed coefficients. Future versions could incorporate machine learning models trained on historical price data for learned parameter optimization.
 
 ## API Response Codes
 

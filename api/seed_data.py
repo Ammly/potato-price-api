@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# api/seed_data.py
 """
 Script to seed the database with initial market and sample price data
 """

@@ -1,4 +1,3 @@
-# api/app/models.py
 from .extensions import db
 from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import JSON

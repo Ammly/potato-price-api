@@ -1,4 +1,3 @@
-# api/manage.py
 """
 Flask-Migrate management script for database migrations
 """

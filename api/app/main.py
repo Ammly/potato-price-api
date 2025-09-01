@@ -1,4 +1,3 @@
-# api/app/main.py
 import os
 from flask import Flask
 from .extensions import db, migrate, limiter

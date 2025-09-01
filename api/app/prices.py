@@ -1,4 +1,3 @@
-# api/app/prices.py
 import json
 import hashlib
 from flask import Blueprint, request, jsonify

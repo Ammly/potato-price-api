@@ -1,4 +1,3 @@
-# api/app/weather.py
 import json
 from flask import Blueprint, request, jsonify, current_app
 from .extensions import db, get_redis, limiter

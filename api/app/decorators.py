@@ -1,4 +1,3 @@
-# api/app/decorators.py
 from functools import wraps
 from flask import request, jsonify
 from .utils.jwt_utils import decode_access_token

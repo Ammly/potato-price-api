@@ -1,4 +1,3 @@
-# api/app/utils/jwt_utils.py
 import os
 import time
 import jwt

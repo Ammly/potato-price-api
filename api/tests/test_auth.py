@@ -1,4 +1,3 @@
-# api/tests/test_auth.py
 import pytest
 import json
 from app.main import create_app

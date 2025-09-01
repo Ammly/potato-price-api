@@ -1,4 +1,3 @@
-# api/tests/test_prices.py
 import pytest
 import json
 from datetime import datetime, timezone

@@ -1,4 +1,3 @@
-# api/app/tasks.py
 import os
 import json
 import numpy as np

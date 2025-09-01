@@ -67,10 +67,10 @@ A production-ready API for estimating potato prices in Kenya, integrating weathe
 
 ## 📚 API Documentation
 
-- **[🚀 Frontend Quick Start Guide](./FRONTEND_QUICKSTART.md)** - **START HERE** for frontend developers
-- **[Complete API Documentation](./API_DOCUMENTATION.md)** - Comprehensive endpoint reference
+- **[🚀 Frontend Quick Start Guide](./docs/FRONTEND_QUICKSTART.md)** - **START HERE** for frontend developers
+- **[Complete API Documentation](./docs/API_DOCUMENTATION.md)** - Comprehensive endpoint reference
 - **[Interactive Testing](./api.http)** - VS Code REST Client requests for all endpoints
-- **[PRD Specification](./prd.md)** - Product requirements and technical specifications
+- **[PRD Specification](./docs/prd.md)** - Product requirements and technical specifications
 
 ### Quick API Reference
 

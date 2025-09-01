@@ -6,7 +6,6 @@ from .decorators import jwt_required
 from .extensions import db, get_redis, limiter
 from .models import Market, MarketPrice, WeatherData, ModelState
 from .estimator import estimate as estimator_fn
-from datetime import datetime
 
 prices_bp = Blueprint("prices", __name__)
 

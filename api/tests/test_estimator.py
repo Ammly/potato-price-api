@@ -1,4 +1,3 @@
-import pytest
 from app.estimator import distance_weighted_base, ewma, estimate
 
 class TestEstimator:

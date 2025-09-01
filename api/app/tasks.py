@@ -80,7 +80,6 @@ def compute_price_residuals():
         for location in locations:
             try:
                 # Get recent price data (last 30 days)
-                cutoff_date = datetime.utcnow() - timedelta(days=30)
                 
                 # Get actual prices
                 actual_prices = []

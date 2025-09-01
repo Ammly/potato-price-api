@@ -146,7 +146,7 @@ def main():
         price_count = MarketPrice.query.count()
         user_count = User.query.count()
         
-        print(f"📊 Summary:")
+        print("📊 Summary:")
         print(f"   Markets: {market_count}")
         print(f"   Price records: {price_count}")
         print(f"   Users: {user_count}")

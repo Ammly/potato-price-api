@@ -11,7 +11,6 @@ from .utils.jwt_utils import (
     REFRESH_TOKEN_EXP_DAYS
 )
 from .schemas import AuthRequest, AuthResponse, RefreshRequest, RefreshResponse
-from sqlalchemy.exc import NoResultFound
 from datetime import datetime, timezone
 import jwt
 

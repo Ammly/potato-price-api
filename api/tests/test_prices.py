@@ -1,10 +1,9 @@
 import pytest
 import json
 from datetime import datetime, timezone
-from unittest.mock import patch
 from app.main import create_app
 from app.extensions import db
-from app.models import User, Market, MarketPrice, ModelState
+from app.models import User, Market, MarketPrice
 from app.utils.jwt_utils import create_access_token
 
 @pytest.fixture

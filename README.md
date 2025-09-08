@@ -4,7 +4,7 @@ A production-ready API for estimating potato prices in Kenya, integrating weathe
 
 ## Features
 
-- **JWT Authentication**: Secure API access with Argon2 password hashing
+- **JWT Authentication**: Secure API access with Bcrypt password hashing
 - **Price Estimation**: Multi-factor algorithmic pricing with weather integration
 - **Weather Integration**: OpenWeatherMap API integration for real-time weather data
 - **Market Data**: Support for multiple markets with distance-weighted pricing

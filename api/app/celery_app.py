@@ -48,6 +48,7 @@ def make_celery(app=None):
 # Create Flask app instance for worker context
 def create_celery_app():
     from .main import create_app
+
     flask_app = create_app()
     return make_celery(flask_app)
 

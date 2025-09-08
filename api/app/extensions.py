@@ -2,12 +2,13 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import os
 import redis
 from flask import current_app
-import os
 
 db = SQLAlchemy()
 migrate = Migrate()
+
 
 # Initialize limiter with Redis storage URI from environment
 def get_limiter_storage_uri():
@@ -19,11 +20,9 @@ def get_limiter_storage_uri():
         storage_url = redis_url.replace("/0", "/1")
     return storage_url
 
+
 # Initialize limiter with Redis storage
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri=get_limiter_storage_uri()
-)
+limiter = Limiter(key_func=get_remote_address, storage_uri=get_limiter_storage_uri())
 
 _redis_client = None
 

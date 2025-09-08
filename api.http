@@ -23,7 +23,7 @@
 # Password: admin123
 
 ### Variables
-@baseUrl = http://localhost:8000
+@baseUrl =  http://34.75.72.110:8000 # http://localhost:8000
 @contentType = application/json
 
 ###

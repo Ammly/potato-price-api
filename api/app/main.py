@@ -20,16 +20,11 @@ def create_app(config_name=None):
 
     # Configure rate limiter - skip initialization in testing to avoid warnings
     if not app.config.get("TESTING"):
-        # Configure rate limiter with storage if available
-        storage_url = app.config.get("RATELIMIT_STORAGE_URL")
-        if storage_url:
-            try:
-                limiter.init_app(app, storage_uri=storage_url)
-            except Exception:
-                # Fallback to in-memory if Redis is not available
-                limiter.init_app(app)
-        else:
+        try:
             limiter.init_app(app)
+            print("Rate limiter configured successfully with Redis storage")
+        except Exception as e:
+            print(f"Failed to configure rate limiter: {e}")
     else:
         # In testing mode, create a mock limiter that does nothing
         class MockLimiter:

@@ -4,7 +4,7 @@ Script to seed the database with initial market and sample price data
 """
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 
 # Add the app to the Python path
@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app.main import create_app
 from app.extensions import db
 from app.models import Market, MarketPrice, User
-from passlib.hash import argon2
+from passlib.hash import bcrypt
 
 
 def seed_markets():
@@ -89,7 +89,7 @@ def seed_sample_prices():
         base_price = base_prices.get(market.name, 90.0)
 
         for days_ago in range(30, 0, -1):
-            date = datetime.utcnow() - timedelta(days=days_ago)
+            date = datetime.now(timezone.utc) - timedelta(days=days_ago)
 
             # Add some random variation (±15%)
             variation = random.uniform(0.85, 1.15)
@@ -118,7 +118,7 @@ def seed_admin_user():
     existing = User.query.filter_by(username=username).first()
     if not existing:
         user = User(
-            username=username, password_hash=argon2.hash(password), role="admin"
+            username=username, password_hash=bcrypt.hash(password), role="admin"
         )
         db.session.add(user)
         db.session.commit()

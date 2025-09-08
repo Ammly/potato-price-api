@@ -16,6 +16,7 @@ def make_celery(app=None):
         result_serializer="json",
         timezone="UTC",
         enable_utc=True,
+        broker_connection_retry_on_startup=True,  # Fix for deprecation warning
         beat_schedule={
             "fetch-weather-data": {
                 "task": "app.tasks.fetch_weather_data",
@@ -44,5 +45,12 @@ def make_celery(app=None):
     return celery
 
 
-# Create standalone celery instance for worker
-celery_app = make_celery()
+# Create Flask app instance for worker context
+def create_celery_app():
+    from .main import create_app
+    flask_app = create_app()
+    return make_celery(flask_app)
+
+
+# Create standalone celery instance for worker with Flask context
+celery_app = create_celery_app()

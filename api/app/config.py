@@ -12,8 +12,9 @@ class Config:
     JWT_SECRET = os.getenv("JWT_SECRET", "jwt-secret-key")
     JWT_EXP_SECONDS = int(os.getenv("JWT_EXP_SECONDS", "900"))
 
-    # Rate limiting
-    RATELIMIT_STORAGE_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
+    # Rate limiting - use Redis database 1 for rate limiting
+    RATELIMIT_STORAGE_URL = os.getenv("RATELIMIT_STORAGE_URL", 
+                                     os.getenv("REDIS_URL", "redis://localhost:6379/0").replace("/0", "/1"))
 
 
 class DevelopmentConfig(Config):
